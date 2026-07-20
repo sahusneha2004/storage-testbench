@@ -659,6 +659,8 @@ class Database:
     def __validate_injected_failure_description(self, failure):
         for expr in [
             testbench.common.retry_return_error_code,
+            testbench.common.retry_return_error_code_on_finish_write,
+            testbench.common.retry_return_error_code_on_half_close,
             testbench.common.retry_return_error_connection,
             testbench.common.retry_return_error_after_bytes,
             testbench.common.retry_return_short_response,
@@ -666,6 +668,7 @@ class Database:
             testbench.common.retry_stall_after_bytes,
             testbench.common.retry_return_redirection_token,
             testbench.common.retry_return_handle_and_redirection_token,
+            testbench.common.retry_return_handle_and_redirection_token_on_finish_write,
             testbench.common.retry_expect_redirection_token,
             testbench.common.retry_return_unreachable_buckets,
             testbench.common.retry_return_error_if_dp_enforced,

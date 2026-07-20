@@ -525,6 +525,29 @@ class Upload(types.SimpleNamespace):
                     )
                 object_checksums = request.object_checksums
 
+            if request.finish_write:
+                return_redirect_token_finish = testbench.common.get_return_write_handle_and_redirect_token_on_finish_write(
+                    db, context
+                )
+                if return_redirect_token_finish:
+                    if handle is None:
+                        handle = str(blob.upload_gen).encode("utf-8")
+                    abort_with_redirect_error(
+                        return_redirect_token_finish,
+                        handle=handle,
+                        generation=upload.metadata.generation,
+                    )
+
+                error_code = testbench.common.get_return_error_code_on_finish_write(
+                    db, context
+                )
+                if error_code:
+                    grpc_status = testbench.common.http_to_grpc_status(error_code)
+                    context.abort(
+                        grpc_status,
+                        "Retry Test: Caused a %s" % str(grpc_status),
+                    )
+
             data = request.WhichOneof("data")
             if data == "checksummed_data":
                 checksummed_data = request.checksummed_data
@@ -628,6 +651,17 @@ class Upload(types.SimpleNamespace):
                             crc32c=persisted_crc32c
                         ),
                     )
+                )
+
+        if not upload.complete:
+            error_code = testbench.common.get_return_error_code_on_half_close(
+                db, context
+            )
+            if error_code:
+                grpc_status = testbench.common.http_to_grpc_status(error_code)
+                context.abort(
+                    grpc_status,
+                    "Retry Test: Caused a %s on half-close" % str(grpc_status),
                 )
 
         # Update metadata checksums fields on the upload instance.

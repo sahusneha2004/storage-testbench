@@ -39,6 +39,10 @@ from google.storage.v2 import storage_pb2
 
 re_remove_index = re.compile(r"\[\d+\]+|^[0-9]+")
 retry_return_error_code = re.compile(r"return-([0-9]+)$")
+retry_return_error_code_on_finish_write = re.compile(
+    r"return-([0-9]+)-on-finish-write$"
+)
+retry_return_error_code_on_half_close = re.compile(r"return-([0-9]+)-on-half-close$")
 retry_return_error_connection = re.compile(r"return-([a-z\-]+)$")
 retry_return_error_after_bytes = re.compile(r"return-([0-9]+)-after-([0-9]+)K$")
 retry_return_short_response = re.compile(
@@ -51,6 +55,9 @@ retry_stall_after_bytes = re.compile(r"stall-for-([0-9]+)s-after-([0-9]+)K$")
 retry_return_redirection_token = re.compile(r"redirect-send-token-([a-z\-]+)$")
 retry_return_handle_and_redirection_token = re.compile(
     r"redirect-send-handle-and-token-([a-z\-]+)$"
+)
+retry_return_handle_and_redirection_token_on_finish_write = re.compile(
+    r"redirect-send-handle-and-token-([a-z\-]+)-on-finish-write$"
 )
 retry_expect_redirection_token = re.compile(r"redirect-expect-token-([a-z\-]+)$")
 retry_return_error_if_dp_enforced = re.compile(r"return-([0-9]+)-if-dp-enforced$")
@@ -1126,6 +1133,37 @@ def get_return_write_handle_and_redirect_token(db, context):
     return _get_grpc_instruction_match(
         db, context, "storage.objects.insert", retry_return_handle_and_redirection_token
     )
+
+
+def get_return_write_handle_and_redirect_token_on_finish_write(db, context):
+    return _get_grpc_instruction_match(
+        db,
+        context,
+        "storage.objects.insert",
+        retry_return_handle_and_redirection_token_on_finish_write,
+    )
+
+
+def get_return_error_code_on_finish_write(db, context):
+    return _get_grpc_instruction_match(
+        db, context, "storage.objects.insert", retry_return_error_code_on_finish_write
+    )
+
+
+def get_return_error_code_on_half_close(db, context):
+    return _get_grpc_instruction_match(
+        db, context, "storage.objects.insert", retry_return_error_code_on_half_close
+    )
+
+
+def http_to_grpc_status(error_code_str: str) -> StatusCode:
+    mapping = {
+        "503": StatusCode.UNAVAILABLE,
+        "500": StatusCode.INTERNAL,
+        "504": StatusCode.DEADLINE_EXCEEDED,
+        "429": StatusCode.RESOURCE_EXHAUSTED,
+    }
+    return mapping.get(error_code_str, StatusCode.UNKNOWN)
 
 
 def get_return_read_handle_and_redirect_token(db, context):
